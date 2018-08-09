@@ -63,13 +63,21 @@ type createChildStackFrameOptions = {
   passCurrentContext?: boolean
 };
 
+
 export function executeStackFrame(
   firstFrame: StackFrame,
   depth: number = 0
 ): ?StackLocal {
   let stack: Array<StackFrame> = [firstFrame];
-  let framepointer = 0;
 
+  return executeStack(stack, depth)
+}
+
+export function executeStack(
+    stack: Array<StackFrame>,
+    depth: number = 0
+): ?StackLocal {
+  let framepointer = depth;
   // eax
   let returnRegister = null;
 
@@ -269,7 +277,13 @@ export function executeStackFrame(
 
     while (true) {
       const instruction = frame.code[frame._pc];
-
+      //console.log(frame._pc)
+      //when expanding, shows only last frame in debugger
+      //original object only in preview
+      //console.log(stack, frame)
+      //console.log(JSON.stringify(stack, null, 4))
+      //console.log(JSON.stringify(frame, null, 4))
+      //console.log(instruction)
       assertRuntimeError(
         instruction !== undefined,
         `no instruction at pc ${frame._pc} in frame ${framepointer}`
@@ -434,16 +448,20 @@ export function executeStackFrame(
 
             // FIXME(sven): assert that res has type of resultType
             const [argTypes, resultType] = subroutine.type;
-
+            //console.log(subroutine)
             const args = popArrayOfValTypes(argTypes);
 
             if (subroutine.isExternal === false) {
               createAndExecuteChildStackFrame(subroutine.code);
             } else {
-              const res = subroutine.code(args.map(arg => arg.value));
+              if(subroutine.code.name == "debug") {
+                  subroutine.code(stack, framepointer)
+              } else {
+                  const res = subroutine.code(args.map(arg => arg.value));
 
-              if (typeof res !== "undefined") {
-                pushResult(castIntoStackLocalOfType(resultType, res));
+                  if (typeof res !== "undefined") {
+                    pushResult(castIntoStackLocalOfType(resultType, res));
+                  }
               }
             }
           }
