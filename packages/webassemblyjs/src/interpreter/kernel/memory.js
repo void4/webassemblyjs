@@ -30,6 +30,8 @@ export function createAllocator(): Allocator {
   }
 
   return {
+    store,
+    offset,
     malloc,
     free,
     get,
