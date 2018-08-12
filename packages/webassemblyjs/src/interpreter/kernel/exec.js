@@ -454,15 +454,17 @@ export function executeStack(
             if (subroutine.isExternal === false) {
               createAndExecuteChildStackFrame(subroutine.code);
             } else {
-              if(subroutine.code.name == "debug") {
-                  subroutine.code(stack, framepointer)
-              } else {
+              if(subroutine.code.name == "usegas") {//XXX debug, check full path!
+                  args["stack"] = stack
+                  args["framepointer"] = framepointer
+                  //subroutine.code(stack, framepointer)
+              }// else {
                   const res = subroutine.code(args.map(arg => arg.value));
 
                   if (typeof res !== "undefined") {
                     pushResult(castIntoStackLocalOfType(resultType, res));
                   }
-              }
+              //}
             }
           }
 
