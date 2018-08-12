@@ -1,0 +1,164 @@
+<meta charset="UTF-8">
+<div style="width:40%;white-space: nowrap;display: inline-block;">.wast source</div>Snapshot<br>
+<textarea style="width:40%;height:80%" id="input"></textarea>
+<textarea style="width:50%;height:80%" id="snapshot"></textarea>
+<br>Arguments:<br>
+<input type="text" id="arg1" value="1">
+<input type="text" id="arg2" value="2">
+<div id="res"></div>
+<div id="info"></div>
+<!--<script src="webassemblyjs@1.0.0-y.8.js"></script>-->
+
+<script src="libwabt.js"></script>
+<script src="wasm-metering@0.2.1.js"></script>
+<script src="bundle.js"></script>
+
+<button onclick="run()" >RUN</button>
+
+<script>
+
+var input = document.getElementById("input")
+var snap = document.getElementById("snapshot")
+
+var arg1 = document.getElementById("arg1")
+var arg2 = document.getElementById("arg2")
+/*
+input.value = `
+(module
+
+  (import "system" "print_i32" (func $print (param i32 i32)))
+
+  (func $add (param i32 i32)
+    get_local 0
+    get_local 1
+    call $print
+  )
+  (export "add" (func $add))
+
+)`
+*/
+input.value = `(module
+  (func $add
+	nop
+  )
+  (export "add" (func $add))
+)
+`
+
+function print_i32(i) {
+	//doesn't work due to strict mode
+	//console.log(arguments.callee.caller)
+	//console.log("RESULT", i)
+	if (typeof i == "number") {
+		var text = i
+	} else {
+		var text = i[0]._value
+		if (i[0]._value == parseInt(arg2.value)) {
+			info("Execution stopped.")
+		}
+	}
+	document.getElementById("res").innerHTML = text
+}
+
+
+function debug(stack, framepointer) {
+	var stack = JSON.parse(JSON.stringify(stack))
+	//console.log(stack)
+	for (var i=0;i<stack.length;i++) {
+		stack[i].allocator = [stack[i].allocator.store, stack[i].allocator.offset]
+	}
+	//console.log(stack[0].originatingModule)
+	snapshot = [input.value, stack, framepointer];
+	snap.value = JSON.stringify(snapshot, null, 0)
+	//console.log(framepointer)
+	console.log(JSON.stringify(stack, null, 4))
+	//console.log(snapshot[1])
+	//console.log(snapshot[0])
+	info("Suspending execution. Resuming execution in 1 second.")
+	setTimeout(resume, 1000)
+	throw new Error("Suspended execution")
+}
+
+async function resume() {
+	//info("")
+
+	var stack = snapshot[1]
+	console.log(stack)
+	//var alloc = webassemblyjs.createAllocator()
+
+	//var instance = webassemblyjs.instantiateFromSource(code, IO);
+	var instance = await webassemblyjs.instantiate(metered, IO);
+	var alloc = instance._allocator
+	console.log("alloc", alloc)
+	console.log(stack)
+	alloc.store = stack[0].allocator[0]
+	alloc.offset = stack[0].allocator[1]
+
+
+	//console.log(instance._allocator.store)
+	//instance._allocator = alloc
+	//console.log(instance)
+	for (var i=0;i<stack.length;i++) {
+		console.log(stack[i])
+		stack[i].allocator = alloc
+		stack[i].originatingModule = instance._moduleInstance
+	}
+
+
+	webassemblyjs.executeStack(stack, 0)//snapshot[2])
+	info("Finished execution.")
+}
+
+var snapshot = null;
+
+
+function usegas(gas, stack, framepointer) {
+	console.log("HERE", gas, stack, framepointer)
+}
+
+function info(msg) {
+	document.getElementById("info").innerHTML = msg
+}
+
+async function run() {
+	info("Starting execution")
+	//console.log(WebAssembly)
+	//console.log(webassemblyjs)
+
+	var module = await webassemblyjs.instantiate(metered, IO);
+
+	try {
+		var res = module.instance.exports.add(parseInt(arg1.value), parseInt(arg2.value));
+		info("Result:", res);
+	} catch (e) {
+		console.log(e)
+		console.log("Suspended execution")
+	}
+
+}
+
+var code = input.value;
+var IO = {"system":{print_i32, debug}, "metering": {usegas}}
+
+var mod = wabt.parseWat('test.wat', code);
+mod.resolveNames();
+mod.validate();
+//use wabt's wasm-interp?
+var binary = mod.toBinary({log: false, write_debug_names:false})
+var buffer = binary.buffer
+
+var metered = wasmMetering.meterWASM(buffer).buffer//Buffer.from(
+//var metered = buffer
+
+console.log(metered)
+console.log(buffer.length, metered.length)
+
+// XXX Can't read debug names because wasm-metering doesn't insert symbols
+var decoded = wabt.readWasm(metered, { readDebugNames: false })
+console.log(decoded)
+
+var wast = decoded.toText({ foldExprs: false, inlineExport: false });
+console.log(wast)
+
+
+</script>
