@@ -55,8 +55,8 @@ function createCompiledModule(ast) {
   // semantics during execution
 
   (0, _denormalizeTypeReferences.transform)(ast);
-  (0, _wastIdentifierToIndex.transform)(ast);
-  console.log(ast);
+  (0, _wastIdentifierToIndex.transform)(ast); //console.log(ast)
+
   (0, _validation.default)(ast);
   t.traverse(ast, {
     ModuleExport: function (_ModuleExport) {
@@ -1064,8 +1064,12 @@ function executeStack(stack) {
               } else {
                 if (subroutine.code.name == "usegas") {
                   //XXX debug, check full path!
-                  args["stack"] = stack;
-                  args["framepointer"] = framepointer; //subroutine.code(stack, framepointer)
+                  args.push({
+                    "value": stack
+                  });
+                  args.push({
+                    "value": framepointer
+                  }); //subroutine.code(stack, framepointer)
                 } // else {
 
 
@@ -3986,8 +3990,8 @@ function instantiateExports(n, allocator, internals, moduleInstance) {
         }
       });
     } else if ((0, _nodes.isNumberLiteral)(node.descr.id) === true) {
-      var keys = Object.keys(instantiatedItemArray);
-      console.log("LOG", instantiatedItemArray, node.descr.id.value, keys); // $FlowIgnore
+      var keys = Object.keys(instantiatedItemArray); //console.log("LOG", instantiatedItemArray, node.descr.id.value, keys)
+      // $FlowIgnore
 
       var _instantiatedItem = instantiatedItemArray[keys[node.descr.id.value]];
       validate(_instantiatedItem);
@@ -4017,8 +4021,8 @@ function instantiateExports(n, allocator, internals, moduleInstance) {
       return ModuleExport;
     }(function (_ref9) {
       var node = _ref9.node;
-      console.log("EXPORT", node);
 
+      //console.log("EXPORT", node)
       switch (node.descr.exportType) {
         case "Func":
           {
@@ -4093,6 +4097,7 @@ function createInstance(allocator, n) {
   instantiateImports(n, allocator, externalElements, instantiatedInternals, moduleInstance);
   instantiateInternals(n, allocator, instantiatedInternals, moduleInstance);
   instantiateDataSections(n, allocator, moduleInstance);
+  console.log("INST", instantiatedInternals);
   instantiateExports(n, allocator, instantiatedInternals, moduleInstance);
   return moduleInstance;
 }

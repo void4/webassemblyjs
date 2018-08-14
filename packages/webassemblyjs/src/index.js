@@ -10,6 +10,9 @@ const { RuntimeError, CompileError, LinkError } = require("./errors");
 const { createCompiledModule, Module } = require("./compiler/compile/module");
 const { checkEndianness } = require("./check-endianness");
 
+const { executeStack } = require("./interpreter/kernel/exec");
+const { createAllocator } = require("./interpreter/kernel/memory");
+
 const WebAssembly = {
   instantiate(
     buff: ArrayBuffer,
@@ -60,6 +63,9 @@ const WebAssembly = {
 
     return new Instance(module, importObject);
   },
+
+  executeStack,
+  createAllocator,
 
   Instance,
   Module,
