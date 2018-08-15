@@ -1,21 +1,36 @@
 <meta charset="UTF-8">
+<title>WasmJump</title>
 <div style="width:30%;white-space: nowrap;display: inline-block;">.wast source</div>
 <div style="width:30%;white-space: nowrap;display: inline-block;">wasm-metered</div>Snapshot<br>
-<textarea style="width:30%;height:80%" id="input"></textarea>
-<textarea style="width:30%;height:80%" id="met"></textarea>
-<textarea style="width:30%;height:80%" id="snapshot"></textarea>
-<br>Arguments:<br>
-<input type="text" id="arg1" value="1">
-<input type="text" id="arg2" value="2">
-<div id="res"></div>
-<div id="info"></div>
-<!--<script src="webassemblyjs@1.0.0-y.8.js"></script>-->
-
+<textarea style="width:30%;height:30%" id="input"></textarea>
+<textarea style="width:30%;height:30%" id="met"></textarea>
+<textarea style="width:30%;height:30%" id="snapshot"></textarea>
+<div style="display:flex">
+    <div style="width:45.5%;">
+        <br>Arguments:<br>
+        <input type="text" id="arg1" value="1">
+        <input type="text" id="arg2" value="2">
+        <button onclick="run()" >RUN</button>
+        <br>
+        <input type="text" id="ownid">
+        <input type="text" id="peerid" placeholder="peerid">
+        <button onclick="peerconnect()">Connect</button>
+        <textarea style="width:30%;height:30%" id="peerinfo"></textarea>
+        <div id="res"></div>
+        <div id="info"></div>
+    </div>
+    <!--<script src="webassemblyjs@1.0.0-y.8.js"></script>-->
+    <div style="width:50%;">
+        <p align="center">
+            <canvas id="canvas" style="border:solid;" width="256" height="256"></canvas>
+        </p>
+    </div>
+</div>
 <script src="libwabt.js"></script>
 <script src="wasm-metering@0.2.1.js"></script>
 <script src="bundle.js"></script>
 
-<button onclick="run()" >RUN</button>
+<script src="peer.min.js"></script>
 
 <script>
 
@@ -25,27 +40,84 @@ var snap = document.getElementById("snapshot")
 
 var arg1 = document.getElementById("arg1")
 var arg2 = document.getElementById("arg2")
-/*
+
+var canvas = document.getElementById("canvas")
+
+var peerinfo = document.getElementById("peerinfo")
+
+var ctx = canvas.getContext("2d");
+ctx.moveTo(0, 0);
+ctx.lineTo(200, 100);
+ctx.stroke();
+
+//console.log("Setting up P2P")
+
+
+var peerid = document.getElementById("peerid")
+var ownid = document.getElementById("ownid")
+
+var peer = new Peer();
+peer.on('open', function(id) {
+  //console.log('My peer ID is: ' + id);
+  ownid.value = id
+});
+
+var peers = []
+
+function updatePeers() {
+  var peerids = peers.map(p=>p.id)
+  peerinfo.value = peerids.join("\n")
+  //console.log()
+}
+
+setInterval(updatePeers, 100)
+
+function initConn(conn) {
+  peers.push(conn)
+  conn.on('data', function(data){
+    // Will print 'hi!'
+    console.log("DATA", data);
+  });
+
+  conn.on("close", function() {
+    peers.splice(peers.indexOf(conn), 1)
+  })
+}
+
+peer.on('connection', function(conn) {
+  console.log("Connect")
+  initConn(conn)
+});
+
+
+// Chooeses a random element from an array, uniformly
+function choice(choices) {
+  var index = Math.floor(Math.random() * choices.length);
+  return choices[index];
+}
+
+function peerconnect() {
+    var conn = peer.connect(peerid.value);
+    conn.on('open', function() {
+      initConn(conn)
+      conn.send('Hello!');
+    });
+}
+
+function sendToRandomPeer(data) {
+  choice(peers).send(data)
+}
+
+
 input.value = `
 (module
-
-  (import "system" "print_i32" (func $print (param i32 i32)))
-
-  (func $add (param i32 i32)
-    get_local 0
-    get_local 1
-    call $print
-  )
-  (export "add" (func $add))
-
-)`
-*/
-input.value = `
-(module
-  (func
-    (nop)
+  (import "canvas" "draw" (func $draw (param i32 i32)))
+  (func $custom
+    (i32.const 150)
+    (i32.const 150)
+    (call $draw)
     )
-  (export "add" (func 0))
+  (export "add" (func $custom))
 )
 `
 
@@ -73,12 +145,14 @@ function debug(stack, framepointer) {
 	}
 	//console.log(stack[0].originatingModule)
 	snapshot = [input.value, stack, framepointer];
-	snap.value = JSON.stringify(snapshot, null, 0)
+	var serialized = JSON.stringify(snapshot, null, 0)
+  snap.value = serialized;
 	//console.log(framepointer)
 	console.log(JSON.stringify(stack, null, 4))
 	//console.log(snapshot[1])
 	//console.log(snapshot[0])
 	info("Suspending execution. Resuming execution in 1 second.")
+  sendToRandomPeer(serialized)
 	setTimeout(resume, 1000)
 	throw new Error("Suspended execution")
 }
@@ -116,11 +190,7 @@ async function resume() {
 var snapshot = null;
 
 
-function usegas(arg) {
-    var stack = JSON.stringify(arg[1], null, 4)
-	console.log("usegas", arg[0], "FP", arg[2], stack)
-    snap.value = stack
-}
+
 
 function info(msg) {
 	document.getElementById("info").innerHTML = msg
@@ -143,8 +213,28 @@ async function run() {
 
 }
 
+function usegas(arg) {
+    var stack = JSON.stringify(arg[1], null, 4)
+	console.log("usegas", arg[0], "FP", arg[2])
+    snap.value = stack
+}
+
+function draw(a) {
+    console.log(a)
+    /*x1, y1, x2, y2
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();*/
+}
+
+var IO = {
+    "system": {print_i32, debug},
+    "metering": {usegas},
+    "canvas": {draw}
+}
+
 var code = input.value;
-var IO = {"system":{print_i32, debug}, "metering": {usegas}}
+
 
 
 var mod = wabt.parseWat('test.wat', code);
@@ -157,15 +247,15 @@ var buffer = binary.buffer
 var metered = wasmMetering.meterWASM(buffer).buffer//Buffer.from(
 //var metered = buffer
 
-console.log(metered)
-console.log(buffer.length, metered.length)
+//console.log(metered)
+//console.log(buffer.length, metered.length)
 
 // XXX Can't read debug names because wasm-metering doesn't insert symbols
 var decoded = wabt.readWasm(metered, { readDebugNames: false })
-console.log(decoded)
+//console.log(decoded)
 
 var wast = decoded.toText({ foldExprs: false, inlineExport: false });
-console.log(wast)
+//console.log(wast)
 
 var idregex = /\(;(\d+);\)/gi
 var match = idregex.exec(wast)
@@ -196,7 +286,7 @@ for (var i=0;i<lines.length;i++) {
 
     if (line.startsWith(typeprefix)) {
         var idlen = line.split(" ")[1].length
-        console.log(line.split(" "))
+        //console.log(line.split(" "))
         var typedecl = line.substring(typeprefix.length+1+idlen+1+"(func".length, line.length-2)
         typedecls[Object.keys(typedecls).length] = typedecl
     } else if (line.startsWith(importprefix)) {
@@ -216,9 +306,9 @@ for (var i=0;i<lines.length;i++) {
     }
 }
 
-console.log(typedecls)
+//console.log(typedecls)
 replaced = result.join("\n")
-console.log(replaced)
+//console.log(replaced)
 
 met.value = replaced
 
