@@ -1,0 +1,37 @@
+<script src="webassemblyjs@1.0.0-y.8.js"></script>
+<!--<script src="bundle.js"></script>-->
+
+<script>
+var code = `
+(module
+  (import "canvas" "draw" (func $0  (param i32 i32)))
+  (import "metering" "usegas" (func $1  (param i32)))
+  (func $2
+    (i32.const 183)
+    (call $1)
+    (i32.const 150)
+    (i32.const 150)
+    (call $0)
+  )
+  (export "custom" (func $2))
+)
+`
+
+function draw(a,b) {
+    console.log(a,b)
+}
+
+function usegas(i) {
+    console.log(i)
+}
+
+var IO = {"canvas":{draw}, "metering":{usegas}}
+
+var instance = webassemblyjs.instantiateFromSource(code, IO);
+try {
+    var res = instance.exports.custom();
+    console.log(res)
+} catch (e) {
+    console.log("Exception:", e)
+}
+</script>
