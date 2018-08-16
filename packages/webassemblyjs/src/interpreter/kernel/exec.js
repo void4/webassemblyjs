@@ -455,8 +455,8 @@ export function executeStack(
               createAndExecuteChildStackFrame(subroutine.code);
             } else {
               if(subroutine.code.name == "usegas") {//XXX debug, check full path!
-                  args["stack"] = stack
-                  args["framepointer"] = framepointer
+                  args.push({"value":stack})
+                  args.push({"value":framepointer})
                   //subroutine.code(stack, framepointer)
               }// else {
                   const res = subroutine.code(args.map(arg => arg.value));

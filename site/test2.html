@@ -104,9 +104,18 @@ function peerconnect() {
     });
 }
 
+<<<<<<< HEAD
 // XXX Actually, use balancing algorithm:
 // compare workloads of two random peers,
 // then send to the one who has less
+=======
+<<<<<<< HEAD
+// XXX Actually, use balancing algorithm:
+// compare workloads of two random peers,
+// then send to the one who has less
+=======
+>>>>>>> d207132f15ffb53411ada68c7e50197fb806ed65
+>>>>>>> 733b0a33f4d678f6544b53a975289607c4f1baeb
 function sendToRandomPeer(data) {
   choice(peers).send(data)
 }
@@ -114,11 +123,17 @@ function sendToRandomPeer(data) {
 
 input.value = `
 (module
+<<<<<<< HEAD
   (import "canvas" "draw" (func $draw (param i32 i32 i32 i32)))
   (func $custom
     (i32.const 50)
     (i32.const 50)
     (i32.const 100)
+=======
+  (import "canvas" "draw" (func $draw (param i32 i32)))
+  (func $custom
+    (i32.const 150)
+>>>>>>> 733b0a33f4d678f6544b53a975289607c4f1baeb
     (i32.const 150)
     (call $draw)
     )
@@ -319,5 +334,8 @@ met.value = replaced
 
 
 </script>
+<<<<<<< HEAD
 
 Many thanks to Sven Sauleau (<a href="https://github.com/xtuc/webassemblyjs">webassemblyjs</a>) and Darius Bacon (<a href="http://wry.me">wry.me</a>) for motivating me to continue with this.
+=======
+>>>>>>> 733b0a33f4d678f6544b53a975289607c4f1baeb
