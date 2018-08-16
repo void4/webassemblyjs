@@ -104,6 +104,9 @@ function peerconnect() {
     });
 }
 
+// XXX Actually, use balancing algorithm:
+// compare workloads of two random peers,
+// then send to the one who has less
 function sendToRandomPeer(data) {
   choice(peers).send(data)
 }
